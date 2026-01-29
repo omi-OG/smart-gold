@@ -1,0 +1,1564 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>OneX Smart Gold (OSG) - Staking DApp</title>
+    <script src="https://cdn.jsdelivr.net/npm/ethers@5.7.2/dist/ethers.umd.min.js"></script>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --primary: #FFD700;
+            --primary-dark: #D4AF37;
+            --secondary: #1a1a2e;
+            --dark: #0f0f1a;
+            --darker: #08080f;
+            --light: #ffffff;
+            --gray: #8b8b9a;
+            --success: #00d084;
+            --error: #ff4757;
+            --warning: #ffa502;
+            --card-bg: rgba(26, 26, 46, 0.8);
+            --border: rgba(255, 215, 0, 0.2);
+        }
+
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        body {
+            font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+            background: linear-gradient(135deg, var(--darker) 0%, var(--dark) 50%, var(--secondary) 100%);
+            min-height: 100vh;
+            color: var(--light);
+            line-height: 1.6;
+        }
+
+        /* Background Animation */
+        .bg-animation {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            overflow: hidden;
+            z-index: 0;
+        }
+
+        .bg-animation::before {
+            content: '';
+            position: absolute;
+            top: -50%;
+            left: -50%;
+            width: 200%;
+            height: 200%;
+            background: radial-gradient(circle at 20% 80%, rgba(255, 215, 0, 0.03) 0%, transparent 50%),
+                        radial-gradient(circle at 80% 20%, rgba(255, 215, 0, 0.03) 0%, transparent 50%);
+            animation: rotate 30s linear infinite;
+        }
+
+        @keyframes rotate {
+            from { transform: rotate(0deg); }
+            to { transform: rotate(360deg); }
+        }
+
+        /* Container */
+        .container {
+            position: relative;
+            z-index: 1;
+            max-width: 1200px;
+            margin: 0 auto;
+            padding: 20px;
+        }
+
+        /* Header */
+        header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            padding: 20px 0;
+            margin-bottom: 40px;
+            flex-wrap: wrap;
+            gap: 20px;
+        }
+
+        .logo {
+            display: flex;
+            align-items: center;
+            gap: 15px;
+        }
+
+        .logo-icon {
+            width: 50px;
+            height: 50px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 50%;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-weight: 700;
+            font-size: 20px;
+            color: var(--dark);
+            box-shadow: 0 0 20px rgba(255, 215, 0, 0.3);
+        }
+
+        .logo-text {
+            font-size: 24px;
+            font-weight: 700;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        .logo-subtitle {
+            font-size: 12px;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 2px;
+        }
+
+        /* Wallet Button */
+        .wallet-btn {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--dark);
+            border: none;
+            padding: 14px 28px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .wallet-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .wallet-btn.connected {
+            background: var(--card-bg);
+            color: var(--primary);
+            border: 1px solid var(--border);
+        }
+
+        .wallet-btn.connected:hover {
+            background: rgba(255, 215, 0, 0.1);
+        }
+
+        .wallet-address {
+            font-family: monospace;
+        }
+
+        /* Network Badge */
+        .network-badge {
+            display: inline-flex;
+            align-items: center;
+            gap: 8px;
+            padding: 6px 14px;
+            background: rgba(0, 208, 132, 0.1);
+            border: 1px solid rgba(0, 208, 132, 0.3);
+            border-radius: 20px;
+            font-size: 12px;
+            color: var(--success);
+            margin-left: 10px;
+        }
+
+        .network-badge.wrong {
+            background: rgba(255, 71, 87, 0.1);
+            border-color: rgba(255, 71, 87, 0.3);
+            color: var(--error);
+        }
+
+        .network-badge::before {
+            content: '';
+            width: 8px;
+            height: 8px;
+            background: currentColor;
+            border-radius: 50%;
+        }
+
+        /* Main Grid */
+        .main-grid {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(300px, 1fr));
+            gap: 24px;
+            margin-bottom: 30px;
+        }
+
+        /* Cards */
+        .card {
+            background: var(--card-bg);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 28px;
+            backdrop-filter: blur(10px);
+            transition: all 0.3s ease;
+        }
+
+        .card:hover {
+            border-color: rgba(255, 215, 0, 0.4);
+            box-shadow: 0 10px 40px rgba(0, 0, 0, 0.3);
+        }
+
+        .card-header {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            margin-bottom: 20px;
+        }
+
+        .card-icon {
+            width: 44px;
+            height: 44px;
+            background: rgba(255, 215, 0, 0.1);
+            border-radius: 12px;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            font-size: 20px;
+        }
+
+        .card-title {
+            font-size: 14px;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .card-value {
+            font-size: 32px;
+            font-weight: 700;
+            color: var(--light);
+            margin-bottom: 8px;
+            word-break: break-all;
+        }
+
+        .card-subtitle {
+            font-size: 13px;
+            color: var(--gray);
+        }
+
+        /* Action Cards */
+        .action-card {
+            grid-column: span 1;
+        }
+
+        .action-card.full-width {
+            grid-column: 1 / -1;
+        }
+
+        .input-group {
+            margin-bottom: 20px;
+        }
+
+        .input-group label {
+            display: block;
+            font-size: 13px;
+            color: var(--gray);
+            margin-bottom: 8px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .input-wrapper {
+            position: relative;
+            display: flex;
+            align-items: center;
+        }
+
+        .input-wrapper input {
+            width: 100%;
+            background: rgba(0, 0, 0, 0.3);
+            border: 1px solid var(--border);
+            border-radius: 12px;
+            padding: 14px 100px 14px 16px;
+            color: var(--light);
+            font-size: 16px;
+            transition: all 0.3s ease;
+        }
+
+        .input-wrapper input:focus {
+            outline: none;
+            border-color: var(--primary);
+        }
+
+        .input-wrapper input::placeholder {
+            color: var(--gray);
+        }
+
+        .input-max {
+            position: absolute;
+            right: 8px;
+            background: rgba(255, 215, 0, 0.15);
+            color: var(--primary);
+            border: none;
+            padding: 6px 12px;
+            border-radius: 8px;
+            font-size: 12px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s ease;
+        }
+
+        .input-max:hover {
+            background: rgba(255, 215, 0, 0.25);
+        }
+
+        /* Buttons */
+        .btn {
+            width: 100%;
+            padding: 16px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            border: none;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+        }
+
+        .btn-primary {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            color: var(--dark);
+        }
+
+        .btn-primary:hover:not(:disabled) {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+        }
+
+        .btn-secondary {
+            background: rgba(255, 255, 255, 0.05);
+            color: var(--light);
+            border: 1px solid var(--border);
+        }
+
+        .btn-secondary:hover:not(:disabled) {
+            background: rgba(255, 255, 255, 0.1);
+            border-color: var(--primary);
+        }
+
+        .btn:disabled {
+            opacity: 0.5;
+            cursor: not-allowed;
+        }
+
+        .btn-row {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 12px;
+        }
+
+        /* Info Grid */
+        .info-grid {
+            display: grid;
+            grid-template-columns: repeat(2, 1fr);
+            gap: 16px;
+            margin-top: 20px;
+            padding-top: 20px;
+            border-top: 1px solid var(--border);
+        }
+
+        .info-item {
+            display: flex;
+            flex-direction: column;
+            gap: 4px;
+        }
+
+        .info-label {
+            font-size: 11px;
+            color: var(--gray);
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .info-value {
+            font-size: 14px;
+            font-weight: 600;
+            color: var(--light);
+        }
+
+        /* Status Messages */
+        .status-message {
+            padding: 14px 18px;
+            border-radius: 12px;
+            font-size: 14px;
+            margin-bottom: 20px;
+            display: none;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .status-message.show {
+            display: flex;
+        }
+
+        .status-message.success {
+            background: rgba(0, 208, 132, 0.1);
+            border: 1px solid rgba(0, 208, 132, 0.3);
+            color: var(--success);
+        }
+
+        .status-message.error {
+            background: rgba(255, 71, 87, 0.1);
+            border: 1px solid rgba(255, 71, 87, 0.3);
+            color: var(--error);
+        }
+
+        .status-message.info {
+            background: rgba(255, 165, 2, 0.1);
+            border: 1px solid rgba(255, 165, 2, 0.3);
+            color: var(--warning);
+        }
+
+        /* Loading Spinner */
+        .spinner {
+            width: 18px;
+            height: 18px;
+            border: 2px solid currentColor;
+            border-top-color: transparent;
+            border-radius: 50%;
+            animation: spin 0.8s linear infinite;
+        }
+
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+
+        /* Modal */
+        .modal-overlay {
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            display: none;
+            align-items: center;
+            justify-content: center;
+            z-index: 1000;
+            backdrop-filter: blur(5px);
+        }
+
+        .modal-overlay.show {
+            display: flex;
+        }
+
+        .modal {
+            background: var(--secondary);
+            border: 1px solid var(--border);
+            border-radius: 20px;
+            padding: 32px;
+            max-width: 400px;
+            width: 90%;
+            text-align: center;
+        }
+
+        .modal-icon {
+            font-size: 48px;
+            margin-bottom: 16px;
+        }
+
+        .modal-title {
+            font-size: 20px;
+            font-weight: 600;
+            margin-bottom: 12px;
+        }
+
+        .modal-text {
+            color: var(--gray);
+            margin-bottom: 24px;
+            line-height: 1.6;
+        }
+
+        .modal-btn {
+            background: var(--primary);
+            color: var(--dark);
+            border: none;
+            padding: 14px 32px;
+            border-radius: 12px;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+        }
+
+        .modal-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 10px 30px rgba(255, 215, 0, 0.3);
+        }
+
+        /* Footer */
+        footer {
+            text-align: center;
+            padding: 40px 0;
+            color: var(--gray);
+            font-size: 13px;
+        }
+
+        footer a {
+            color: var(--primary);
+            text-decoration: none;
+        }
+
+        /* Responsive */
+        @media (max-width: 768px) {
+            header {
+                flex-direction: column;
+                text-align: center;
+            }
+
+            .card-value {
+                font-size: 24px;
+            }
+
+            .btn-row {
+                grid-template-columns: 1fr;
+            }
+        }
+
+        /* Pulse Animation for Live Data */
+        .pulse {
+            animation: pulse 2s ease-in-out infinite;
+        }
+
+        @keyframes pulse {
+            0%, 100% { opacity: 1; }
+            50% { opacity: 0.7; }
+        }
+
+        /* Gradient Text */
+        .gradient-text {
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+
+        /* Section Title */
+        .section-title {
+            font-size: 18px;
+            font-weight: 600;
+            margin-bottom: 20px;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+
+        .section-title::before {
+            content: '';
+            width: 4px;
+            height: 20px;
+            background: linear-gradient(135deg, var(--primary) 0%, var(--primary-dark) 100%);
+            border-radius: 2px;
+        }
+    </style>
+</head>
+<body>
+    <div class="bg-animation"></div>
+
+    <div class="container">
+        <!-- Header -->
+        <header>
+            <div class="logo">
+                <div class="logo-icon">OSG</div>
+                <div>
+                    <div class="logo-text">OneX Smart Gold</div>
+                    <div class="logo-subtitle">Decentralized Staking</div>
+                </div>
+            </div>
+            <button id="connectWalletBtn" class="wallet-btn">
+                <span>Connect Wallet</span>
+            </button>
+        </header>
+
+        <!-- Status Messages -->
+        <div id="statusMessage" class="status-message"></div>
+
+        <!-- Dashboard Grid -->
+        <div class="main-grid">
+            <!-- Wallet Info Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">👛</div>
+                    <div>
+                        <div class="card-title">Wallet Address</div>
+                        <div id="walletAddress" class="card-value" style="font-size: 16px; font-family: monospace;">Not Connected</div>
+                    </div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Network</div>
+                        <div id="networkName" class="info-value">-</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Chain ID</div>
+                        <div id="chainId" class="info-value">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- OSG Balance Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🪙</div>
+                    <div>
+                        <div class="card-title">OSG Balance</div>
+                        <div id="osgBalance" class="card-value">0.00</div>
+                        <div class="card-subtitle">Available to stake</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Staked Amount Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">🔒</div>
+                    <div>
+                        <div class="card-title">Staked Amount</div>
+                        <div id="stakedAmount" class="card-value">0.00</div>
+                        <div class="card-subtitle">Currently staking</div>
+                    </div>
+                </div>
+                <div class="info-grid">
+                    <div class="info-item">
+                        <div class="info-label">Staking Status</div>
+                        <div id="stakingStatus" class="info-value">Inactive</div>
+                    </div>
+                    <div class="info-item">
+                        <div class="info-label">Start Time</div>
+                        <div id="stakeStartTime" class="info-value">-</div>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Pending Rewards Card -->
+            <div class="card">
+                <div class="card-header">
+                    <div class="card-icon">💰</div>
+                    <div>
+                        <div class="card-title">Pending Rewards</div>
+                        <div id="pendingRewards" class="card-value gradient-text">0.00</div>
+                        <div class="card-subtitle">OSG tokens ready to claim</div>
+                    </div>
+                </div>
+                <button id="claimRewardBtn" class="btn btn-primary" style="margin-top: 20px;" disabled>
+                    Claim Rewards
+                </button>
+            </div>
+        </div>
+
+        <!-- Actions Section -->
+        <div class="section-title">Staking Actions</div>
+        <div class="main-grid">
+            <!-- Stake Card -->
+            <div class="card action-card">
+                <div class="card-header">
+                    <div class="card-icon">📥</div>
+                    <div>
+                        <div class="card-title">Stake OSG</div>
+                        <div class="card-subtitle">Lock tokens to earn rewards</div>
+                    </div>
+                </div>
+                <div class="input-group">
+                    <label>Amount to Stake</label>
+                    <div class="input-wrapper">
+                        <input type="number" id="stakeAmount" placeholder="0.00" step="0.01" min="0">
+                        <button class="input-max" onclick="setMaxStake()">MAX</button>
+                    </div>
+                </div>
+                <button id="approveBtn" class="btn btn-secondary" style="margin-bottom: 12px;" disabled>
+                    Approve OSG
+                </button>
+                <button id="stakeBtn" class="btn btn-primary" disabled>
+                    Stake Now
+                </button>
+            </div>
+
+            <!-- Unstake Card -->
+            <div class="card action-card">
+                <div class="card-header">
+                    <div class="card-icon">📤</div>
+                    <div>
+                        <div class="card-title">Unstake OSG</div>
+                        <div class="card-subtitle">Withdraw your staked tokens</div>
+                    </div>
+                </div>
+                <div class="info-grid" style="margin-bottom: 20px;">
+                    <div class="info-item">
+                        <div class="info-label">Your Stake</div>
+                        <div id="unstakeAmount" class="info-value">0.00 OSG</div>
+                    </div>
+                </div>
+                <button id="unstakeBtn" class="btn btn-primary" disabled>
+                    Unstake All
+                </button>
+                <p style="margin-top: 16px; font-size: 12px; color: var(--gray); text-align: center;">
+                    Unstaking will withdraw your entire stake and claim pending rewards
+                </p>
+            </div>
+        </div>
+
+        <!-- Contract Info -->
+        <div class="card" style="margin-top: 30px;">
+            <div class="card-header">
+                <div class="card-icon">📋</div>
+                <div>
+                    <div class="card-title">Contract Addresses</div>
+                    <div class="card-subtitle">Verified on Polygonscan</div>
+                </div>
+            </div>
+            <div class="info-grid">
+                <div class="info-item">
+                    <div class="info-label">OSG Token</div>
+                    <div class="info-value" style="font-family: monospace; font-size: 12px;">
+                        <a href="https://polygonscan.com/token/0x25c49541763b9Aa482a28E41b5a150CDa2E49a82" target="_blank" style="color: var(--primary); text-decoration: none;">
+                            0x25c4...9a82 ↗
+                        </a>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Staking Contract</div>
+                    <div class="info-value" style="font-family: monospace; font-size: 12px;">
+                        <a href="https://polygonscan.com/address/0xa1D71A7459D757e6471ec7573867301A261504A4" target="_blank" style="color: var(--primary); text-decoration: none;">
+                            0xa1D7...04A4 ↗
+                        </a>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Reward Pool</div>
+                    <div class="info-value" style="font-family: monospace; font-size: 12px;">
+                        <a href="https://polygonscan.com/address/0x1555B0168A84E80e0B547669Bd4E2bAc7bbd260C" target="_blank" style="color: var(--primary); text-decoration: none;">
+                            0x1555...260C ↗
+                        </a>
+                    </div>
+                </div>
+                <div class="info-item">
+                    <div class="info-label">Network</div>
+                    <div class="info-value">Polygon Mainnet</div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Footer -->
+        <footer>
+            <p>OneX Smart Gold (OSG) Staking DApp | Built for Polygon Mainnet</p>
+            <p style="margin-top: 8px;">Always verify contract addresses before transacting</p>
+        </footer>
+    </div>
+
+    <!-- Modal -->
+    <div id="modal" class="modal-overlay">
+        <div class="modal">
+            <div id="modalIcon" class="modal-icon">⚠️</div>
+            <div id="modalTitle" class="modal-title">Wrong Network</div>
+            <div id="modalText" class="modal-text">Please switch to Polygon Mainnet to use this DApp.</div>
+            <button id="modalBtn" class="modal-btn">Switch Network</button>
+        </div>
+    </div>
+
+    <script>
+        // ============================================
+        // CONFIGURATION
+        // ============================================
+        const CONFIG = {
+            // Network Settings
+            NETWORK: {
+                chainId: 137,
+                chainIdHex: '0x89',
+                name: 'Polygon Mainnet',
+                rpcUrl: 'https://polygon-rpc.com',
+                currency: 'MATIC',
+                explorer: 'https://polygonscan.com'
+            },
+            
+            // Contract Addresses
+            CONTRACTS: {
+                OSG_TOKEN: '0x25c49541763b9Aa482a28E41b5a150CDa2E49a82',
+                STAKING: '0xa1D71A7459D757e6471ec7573867301A261504A4',
+                REWARD_POOL: '0x1555B0168A84E80e0B547669Bd4E2bAc7bbd260C'
+            },
+            
+            // Token Decimals (default to 18 if fetch fails)
+            DEFAULT_DECIMALS: 18
+        };
+
+        // ============================================
+        // CONTRACT ABIs
+        // ============================================
+        const ABIS = {
+            // Standard ERC20 + additional functions
+            OSG_TOKEN: [
+                // Standard ERC20
+                'function name() view returns (string)',
+                'function symbol() view returns (string)',
+                'function decimals() view returns (uint8)',
+                'function totalSupply() view returns (uint256)',
+                'function balanceOf(address account) view returns (uint256)',
+                'function transfer(address recipient, uint256 amount) returns (bool)',
+                'function allowance(address owner, address spender) view returns (uint256)',
+                'function approve(address spender, uint256 amount) returns (bool)',
+                'function transferFrom(address sender, address recipient, uint256 amount) returns (bool)',
+                // Events
+                'event Transfer(address indexed from, address indexed to, uint256 value)',
+                'event Approval(address indexed owner, address indexed spender, uint256 value)'
+            ],
+            
+            // Staking Contract
+            STAKING: [
+                'function stake(uint256 amount)',
+                'function unstake()',
+                'function isStaking(address account) view returns (bool)',
+                'function stakeOf(address account) view returns (uint256 amount, uint256 startTime, bool active)',
+                'event Staked(address indexed user, uint256 amount)',
+                'event Unstaked(address indexed user, uint256 amount)'
+            ],
+            
+            // Reward Pool Contract
+            REWARD_POOL: [
+                'function pendingReward(address account) view returns (uint256)',
+                'function claimReward()',
+                'event RewardClaimed(address indexed user, uint256 amount)'
+            ]
+        };
+
+        // ============================================
+        // GLOBAL STATE
+        // ============================================
+        let state = {
+            provider: null,
+            signer: null,
+            walletAddress: null,
+            chainId: null,
+            contracts: {},
+            decimals: 18,
+            balances: {
+                osg: '0',
+                staked: '0',
+                pendingReward: '0'
+            },
+            stakingInfo: {
+                isStaking: false,
+                startTime: null,
+                active: false
+            }
+        };
+
+        // ============================================
+        // UTILITY FUNCTIONS
+        // ============================================
+        
+        /**
+         * Format token amount with proper decimals
+         */
+        function formatAmount(amount, decimals = state.decimals) {
+            if (!amount || amount === '0') return '0.00';
+            try {
+                const formatted = ethers.utils.formatUnits(amount.toString(), decimals);
+                // Format to max 6 decimal places, remove trailing zeros
+                return parseFloat(formatted).toLocaleString('en-US', {
+                    minimumFractionDigits: 2,
+                    maximumFractionDigits: 6
+                });
+            } catch (e) {
+                console.error('Format amount error:', e);
+                return '0.00';
+            }
+        }
+
+        /**
+         * Parse input amount to token units
+         */
+        function parseAmount(amount, decimals = state.decimals) {
+            if (!amount || isNaN(amount) || amount === '') return ethers.BigNumber.from(0);
+            try {
+                return ethers.utils.parseUnits(amount.toString(), decimals);
+            } catch (e) {
+                console.error('Parse amount error:', e);
+                return ethers.BigNumber.from(0);
+            }
+        }
+
+        /**
+         * Format address for display
+         */
+        function formatAddress(address) {
+            if (!address) return 'Not Connected';
+            return `${address.slice(0, 6)}...${address.slice(-4)}`;
+        }
+
+        /**
+         * Format timestamp to readable date
+         */
+        function formatTimestamp(timestamp) {
+            if (!timestamp || timestamp === 0) return '-';
+            try {
+                const date = new Date(timestamp * 1000);
+                return date.toLocaleDateString('en-US', {
+                    month: 'short',
+                    day: 'numeric',
+                    year: 'numeric',
+                    hour: '2-digit',
+                    minute: '2-digit'
+                });
+            } catch (e) {
+                return '-';
+            }
+        }
+
+        /**
+         * Show status message
+         */
+        function showStatus(message, type = 'info', duration = 5000) {
+            const statusEl = document.getElementById('statusMessage');
+            statusEl.className = `status-message ${type} show`;
+            statusEl.innerHTML = `
+                <span>${type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️'}</span>
+                <span>${message}</span>
+            `;
+            
+            if (duration > 0) {
+                setTimeout(() => {
+                    statusEl.classList.remove('show');
+                }, duration);
+            }
+        }
+
+        /**
+         * Hide status message
+         */
+        function hideStatus() {
+            document.getElementById('statusMessage').classList.remove('show');
+        }
+
+        /**
+         * Show modal dialog
+         */
+        function showModal(title, text, icon = '⚠️', btnText = 'OK', btnAction = null) {
+            document.getElementById('modalTitle').textContent = title;
+            document.getElementById('modalText').textContent = text;
+            document.getElementById('modalIcon').textContent = icon;
+            document.getElementById('modalBtn').textContent = btnText;
+            
+            const modal = document.getElementById('modal');
+            modal.classList.add('show');
+            
+            const btn = document.getElementById('modalBtn');
+            btn.onclick = () => {
+                modal.classList.remove('show');
+                if (btnAction) btnAction();
+            };
+        }
+
+        /**
+         * Hide modal
+         */
+        function hideModal() {
+            document.getElementById('modal').classList.remove('show');
+        }
+
+        // ============================================
+        // WALLET CONNECTION
+        // ============================================
+
+        /**
+         * Initialize wallet connection
+         */
+        async function connectWallet() {
+            const btn = document.getElementById('connectWalletBtn');
+            
+            try {
+                // Check if MetaMask is installed
+                if (!window.ethereum) {
+                    showModal(
+                        'MetaMask Required',
+                        'Please install MetaMask to use this DApp.',
+                        '🦊',
+                        'Get MetaMask',
+                        () => window.open('https://metamask.io', '_blank')
+                    );
+                    return;
+                }
+
+                btn.innerHTML = '<div class="spinner"></div><span>Connecting...</span>';
+
+                // Request account access
+                const accounts = await window.ethereum.request({
+                    method: 'eth_requestAccounts'
+                });
+
+                if (!accounts || accounts.length === 0) {
+                    throw new Error('No accounts found');
+                }
+
+                // Initialize provider and signer
+                state.provider = new ethers.providers.Web3Provider(window.ethereum);
+                state.signer = state.provider.getSigner();
+                state.walletAddress = accounts[0];
+
+                // Get network info
+                const network = await state.provider.getNetwork();
+                state.chainId = network.chainId;
+
+                // Check if on correct network
+                if (state.chainId !== CONFIG.NETWORK.chainId) {
+                    showModal(
+                        'Wrong Network',
+                        `Please switch to ${CONFIG.NETWORK.name} (Chain ID: ${CONFIG.NETWORK.chainId}) to use this DApp.`,
+                        '🔌',
+                        'Switch Network',
+                        switchToPolygon
+                    );
+                    btn.innerHTML = '<span>Connect Wallet</span>';
+                    return;
+                }
+
+                // Initialize contracts
+                await initializeContracts();
+
+                // Fetch token decimals
+                await fetchDecimals();
+
+                // Update UI
+                updateWalletUI();
+                
+                // Fetch all data
+                await refreshAllData();
+
+                // Setup event listeners
+                setupEventListeners();
+
+                showStatus('Wallet connected successfully!', 'success');
+
+            } catch (error) {
+                console.error('Connection error:', error);
+                showStatus(error.message || 'Failed to connect wallet', 'error');
+                btn.innerHTML = '<span>Connect Wallet</span>';
+            }
+        }
+
+        /**
+         * Switch to Polygon Mainnet
+         */
+        async function switchToPolygon() {
+            try {
+                await window.ethereum.request({
+                    method: 'wallet_switchEthereumChain',
+                    params: [{ chainId: CONFIG.NETWORK.chainIdHex }]
+                });
+                // Reconnect after switching
+                await connectWallet();
+            } catch (switchError) {
+                // If network doesn't exist, add it
+                if (switchError.code === 4902) {
+                    try {
+                        await window.ethereum.request({
+                            method: 'wallet_addEthereumChain',
+                            params: [{
+                                chainId: CONFIG.NETWORK.chainIdHex,
+                                chainName: CONFIG.NETWORK.name,
+                                nativeCurrency: {
+                                    name: CONFIG.NETWORK.currency,
+                                    symbol: CONFIG.NETWORK.currency,
+                                    decimals: 18
+                                },
+                                rpcUrls: [CONFIG.NETWORK.rpcUrl],
+                                blockExplorerUrls: [CONFIG.NETWORK.explorer]
+                            }]
+                        });
+                        await connectWallet();
+                    } catch (addError) {
+                        showStatus('Failed to add Polygon network', 'error');
+                    }
+                } else {
+                    showStatus('Failed to switch network', 'error');
+                }
+            }
+        }
+
+        /**
+         * Disconnect wallet
+         */
+        function disconnectWallet() {
+            state = {
+                provider: null,
+                signer: null,
+                walletAddress: null,
+                chainId: null,
+                contracts: {},
+                decimals: 18,
+                balances: { osg: '0', staked: '0', pendingReward: '0' },
+                stakingInfo: { isStaking: false, startTime: null, active: false }
+            };
+            
+            updateWalletUI();
+            updateDashboard();
+            showStatus('Wallet disconnected', 'info');
+        }
+
+        /**
+         * Initialize contract instances
+         */
+        async function initializeContracts() {
+            state.contracts.osgToken = new ethers.Contract(
+                CONFIG.CONTRACTS.OSG_TOKEN,
+                ABIS.OSG_TOKEN,
+                state.signer
+            );
+            
+            state.contracts.staking = new ethers.Contract(
+                CONFIG.CONTRACTS.STAKING,
+                ABIS.STAKING,
+                state.signer
+            );
+            
+            state.contracts.rewardPool = new ethers.Contract(
+                CONFIG.CONTRACTS.REWARD_POOL,
+                ABIS.REWARD_POOL,
+                state.signer
+            );
+        }
+
+        /**
+         * Fetch token decimals with fallback
+         */
+        async function fetchDecimals() {
+            try {
+                const decimals = await state.contracts.osgToken.decimals();
+                state.decimals = decimals;
+            } catch (e) {
+                console.warn('Failed to fetch decimals, using default:', CONFIG.DEFAULT_DECIMALS);
+                state.decimals = CONFIG.DEFAULT_DECIMALS;
+            }
+        }
+
+        /**
+         * Setup wallet event listeners
+         */
+        function setupEventListeners() {
+            if (!window.ethereum) return;
+
+            // Account changed
+            window.ethereum.on('accountsChanged', (accounts) => {
+                if (accounts.length === 0) {
+                    disconnectWallet();
+                } else {
+                    state.walletAddress = accounts[0];
+                    state.signer = state.provider.getSigner();
+                    updateWalletUI();
+                    refreshAllData();
+                    showStatus('Account changed', 'info');
+                }
+            });
+
+            // Chain changed
+            window.ethereum.on('chainChanged', (chainId) => {
+                window.location.reload();
+            });
+        }
+
+        // ============================================
+        // DATA FETCHING
+        // ============================================
+
+        /**
+         * Refresh all data
+         */
+        async function refreshAllData() {
+            if (!state.walletAddress) return;
+            
+            await Promise.all([
+                fetchOSGBalance(),
+                fetchStakingInfo(),
+                fetchPendingRewards()
+            ]);
+            
+            updateDashboard();
+        }
+
+        /**
+         * Fetch OSG token balance
+         */
+        async function fetchOSGBalance() {
+            try {
+                const balance = await state.contracts.osgToken.balanceOf(state.walletAddress);
+                state.balances.osg = balance.toString();
+            } catch (e) {
+                console.error('Fetch OSG balance error:', e);
+                state.balances.osg = '0';
+            }
+        }
+
+        /**
+         * Fetch staking information
+         */
+        async function fetchStakingInfo() {
+            try {
+                // Check if staking
+                const isStaking = await state.contracts.staking.isStaking(state.walletAddress);
+                state.stakingInfo.isStaking = isStaking;
+
+                if (isStaking) {
+                    // Get stake details
+                    const stakeInfo = await state.contracts.staking.stakeOf(state.walletAddress);
+                    state.balances.staked = stakeInfo.amount.toString();
+                    state.stakingInfo.startTime = stakeInfo.startTime.toNumber();
+                    state.stakingInfo.active = stakeInfo.active;
+                } else {
+                    state.balances.staked = '0';
+                    state.stakingInfo.startTime = null;
+                    state.stakingInfo.active = false;
+                }
+            } catch (e) {
+                console.error('Fetch staking info error:', e);
+                state.balances.staked = '0';
+                state.stakingInfo.isStaking = false;
+            }
+        }
+
+        /**
+         * Fetch pending rewards
+         */
+        async function fetchPendingRewards() {
+            try {
+                const rewards = await state.contracts.rewardPool.pendingReward(state.walletAddress);
+                state.balances.pendingReward = rewards.toString();
+            } catch (e) {
+                console.error('Fetch pending rewards error:', e);
+                state.balances.pendingReward = '0';
+            }
+        }
+
+        // ============================================
+        // UI UPDATES
+        // ============================================
+
+        /**
+         * Update wallet UI
+         */
+        function updateWalletUI() {
+            const btn = document.getElementById('connectWalletBtn');
+            const walletAddressEl = document.getElementById('walletAddress');
+            const networkNameEl = document.getElementById('networkName');
+            const chainIdEl = document.getElementById('chainId');
+
+            if (state.walletAddress) {
+                btn.classList.add('connected');
+                btn.innerHTML = `
+                    <span class="wallet-address">${formatAddress(state.walletAddress)}</span>
+                    ${state.chainId === CONFIG.NETWORK.chainId 
+                        ? '<span class="network-badge">Polygon</span>' 
+                        : '<span class="network-badge wrong">Wrong Network</span>'}
+                `;
+                btn.onclick = disconnectWallet;
+                
+                walletAddressEl.textContent = state.walletAddress;
+                networkNameEl.textContent = state.chainId === CONFIG.NETWORK.chainId ? 'Polygon' : 'Wrong Network';
+                chainIdEl.textContent = state.chainId || '-';
+            } else {
+                btn.classList.remove('connected');
+                btn.innerHTML = '<span>Connect Wallet</span>';
+                btn.onclick = connectWallet;
+                
+                walletAddressEl.textContent = 'Not Connected';
+                networkNameEl.textContent = '-';
+                chainIdEl.textContent = '-';
+            }
+        }
+
+        /**
+         * Update dashboard with current data
+         */
+        function updateDashboard() {
+            // OSG Balance
+            document.getElementById('osgBalance').textContent = formatAmount(state.balances.osg);
+            
+            // Staked Amount
+            document.getElementById('stakedAmount').textContent = formatAmount(state.balances.staked);
+            document.getElementById('unstakeAmount').textContent = formatAmount(state.balances.staked) + ' OSG';
+            
+            // Staking Status
+            document.getElementById('stakingStatus').textContent = state.stakingInfo.isStaking ? 'Active ✅' : 'Inactive';
+            document.getElementById('stakeStartTime').textContent = formatTimestamp(state.stakingInfo.startTime);
+            
+            // Pending Rewards
+            document.getElementById('pendingRewards').textContent = formatAmount(state.balances.pendingReward);
+            
+            // Update button states
+            updateButtonStates();
+        }
+
+        /**
+         * Update button states based on current conditions
+         */
+        function updateButtonStates() {
+            const isConnected = !!state.walletAddress;
+            const isCorrectNetwork = state.chainId === CONFIG.NETWORK.chainId;
+            const hasBalance = parseFloat(state.balances.osg) > 0;
+            const hasStaked = parseFloat(state.balances.staked) > 0;
+            const hasRewards = parseFloat(state.balances.pendingReward) > 0;
+            
+            // Approve button
+            document.getElementById('approveBtn').disabled = !isConnected || !isCorrectNetwork || !hasBalance;
+            
+            // Stake button
+            document.getElementById('stakeBtn').disabled = !isConnected || !isCorrectNetwork || !hasBalance;
+            
+            // Unstake button
+            document.getElementById('unstakeBtn').disabled = !isConnected || !isCorrectNetwork || !hasStaked;
+            
+            // Claim reward button
+            document.getElementById('claimRewardBtn').disabled = !isConnected || !isCorrectNetwork || !hasRewards;
+        }
+
+        // ============================================
+        // STAKING ACTIONS
+        // ============================================
+
+        /**
+         * Set max stake amount
+         */
+        function setMaxStake() {
+            const maxAmount = ethers.utils.formatUnits(state.balances.osg, state.decimals);
+            document.getElementById('stakeAmount').value = maxAmount;
+        }
+
+        /**
+         * Approve OSG tokens for staking
+         */
+        async function approveOSG() {
+            const btn = document.getElementById('approveBtn');
+            const amount = document.getElementById('stakeAmount').value;
+            
+            if (!amount || parseFloat(amount) <= 0) {
+                showStatus('Please enter a valid amount', 'error');
+                return;
+            }
+            
+            const parsedAmount = parseAmount(amount);
+            if (parsedAmount.gt(state.balances.osg)) {
+                showStatus('Insufficient balance', 'error');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner"></div> Approving...';
+                
+                // Approve max uint256 for unlimited approval (common in DeFi)
+                // Or approve exact amount
+                const tx = await state.contracts.osgToken.approve(
+                    CONFIG.CONTRACTS.STAKING,
+                    parsedAmount
+                );
+                
+                showStatus('Approval transaction submitted...', 'info', 0);
+                
+                await tx.wait();
+                
+                showStatus('OSG approved successfully!', 'success');
+                
+            } catch (error) {
+                console.error('Approve error:', error);
+                showStatus(error.message || 'Approval failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Approve OSG';
+            }
+        }
+
+        /**
+         * Stake OSG tokens
+         */
+        async function stakeOSG() {
+            const btn = document.getElementById('stakeBtn');
+            const amount = document.getElementById('stakeAmount').value;
+            
+            if (!amount || parseFloat(amount) <= 0) {
+                showStatus('Please enter a valid amount', 'error');
+                return;
+            }
+            
+            const parsedAmount = parseAmount(amount);
+            if (parsedAmount.gt(state.balances.osg)) {
+                showStatus('Insufficient balance', 'error');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner"></div> Staking...';
+                
+                // First check allowance
+                const allowance = await state.contracts.osgToken.allowance(
+                    state.walletAddress,
+                    CONFIG.CONTRACTS.STAKING
+                );
+                
+                if (allowance.lt(parsedAmount)) {
+                    showStatus('Please approve tokens first', 'error');
+                    btn.disabled = false;
+                    btn.innerHTML = 'Stake Now';
+                    return;
+                }
+                
+                const tx = await state.contracts.staking.stake(parsedAmount);
+                
+                showStatus('Stake transaction submitted...', 'info', 0);
+                
+                await tx.wait();
+                
+                showStatus('OSG staked successfully!', 'success');
+                
+                // Clear input
+                document.getElementById('stakeAmount').value = '';
+                
+                // Refresh data
+                await refreshAllData();
+                
+            } catch (error) {
+                console.error('Stake error:', error);
+                showStatus(error.message || 'Staking failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Stake Now';
+            }
+        }
+
+        /**
+         * Unstake OSG tokens
+         */
+        async function unstakeOSG() {
+            const btn = document.getElementById('unstakeBtn');
+            
+            if (!state.stakingInfo.isStaking || parseFloat(state.balances.staked) === 0) {
+                showStatus('No tokens to unstake', 'error');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner"></div> Unstaking...';
+                
+                const tx = await state.contracts.staking.unstake();
+                
+                showStatus('Unstake transaction submitted...', 'info', 0);
+                
+                await tx.wait();
+                
+                showStatus('OSG unstaked successfully! Rewards claimed if any.', 'success');
+                
+                // Refresh data
+                await refreshAllData();
+                
+            } catch (error) {
+                console.error('Unstake error:', error);
+                showStatus(error.message || 'Unstaking failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Unstake All';
+            }
+        }
+
+        /**
+         * Claim rewards
+         */
+        async function claimRewards() {
+            const btn = document.getElementById('claimRewardBtn');
+            
+            if (parseFloat(state.balances.pendingReward) === 0) {
+                showStatus('No rewards to claim', 'error');
+                return;
+            }
+
+            try {
+                btn.disabled = true;
+                btn.innerHTML = '<div class="spinner"></div> Claiming...';
+                
+                const tx = await state.contracts.rewardPool.claimReward();
+                
+                showStatus('Claim transaction submitted...', 'info', 0);
+                
+                await tx.wait();
+                
+                showStatus('Rewards claimed successfully!', 'success');
+                
+                // Refresh data
+                await refreshAllData();
+                
+            } catch (error) {
+                console.error('Claim error:', error);
+                showStatus(error.message || 'Claim failed', 'error');
+            } finally {
+                btn.disabled = false;
+                btn.innerHTML = 'Claim Rewards';
+            }
+        }
+
+        // ============================================
+        // AUTO-REFRESH
+        // ============================================
+        
+        // Refresh data every 15 seconds
+        setInterval(() => {
+            if (state.walletAddress && state.chainId === CONFIG.NETWORK.chainId) {
+                refreshAllData();
+            }
+        }, 15000);
+
+        // ============================================
+        // EVENT LISTENERS
+        // ============================================
+        
+        document.addEventListener('DOMContentLoaded', () => {
+            // Connect wallet button
+            document.getElementById('connectWalletBtn').onclick = connectWallet;
+            
+            // Approve button
+            document.getElementById('approveBtn').onclick = approveOSG;
+            
+            // Stake button
+            document.getElementById('stakeBtn').onclick = stakeOSG;
+            
+            // Unstake button
+            document.getElementById('unstakeBtn').onclick = unstakeOSG;
+            
+            // Claim reward button
+            document.getElementById('claimRewardBtn').onclick = claimRewards;
+            
+            // Check if already connected
+            if (window.ethereum) {
+                window.ethereum.request({ method: 'eth_accounts' })
+                    .then(accounts => {
+                        if (accounts.length > 0) {
+                            connectWallet();
+                        }
+                    })
+                    .catch(console.error);
+            }
+        });
+
+        // Handle input changes
+        document.getElementById('stakeAmount').addEventListener('input', (e) => {
+            const value = parseFloat(e.target.value);
+            const maxAmount = parseFloat(ethers.utils.formatUnits(state.balances.osg, state.decimals));
+            
+            if (value > maxAmount) {
+                e.target.style.borderColor = 'var(--error)';
+            } else {
+                e.target.style.borderColor = '';
+            }
+        });
+    </script>
+</body>
+</html>
